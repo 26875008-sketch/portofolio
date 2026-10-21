@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GZ — Archive</title>
+<style>
+:root{
+  --bg:#0a0a0a;
+  --fg:#e8e4dc;
+  --dim:#6b665e;
+  --line:#242424;
+  --pad:clamp(16px,4.5vw,64px);
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --serif:"Times New Roman",Times,serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);color:var(--fg);
+  font-family:var(--mono);
+  font-size:13px;line-height:1.5;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+::selection{background:var(--fg);color:var(--bg)}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+
+/* ---------- grain ---------- */
+#grain{
+  position:fixed;inset:0;pointer-events:none;z-index:9000;
+  opacity:.045;mix-blend-mode:screen;
+}
+
+/* ---------- cursor ---------- */
+#cursor{
+  position:fixed;top:0;left:0;width:8px;height:8px;
+  border-radius:50%;background:var(--fg);
+  pointer-events:none;z-index:9500;
+  transform:translate(-50%,-50%);
+  transition:width .25s,height .25s,background .25s,opacity .3s;
+  mix-blend-mode:difference;
+}
+#cursor.grow{width:52px;height:52px;background:#fff}
+#cursor.hide{opacity:0}
+@media(hover:none){#cursor{display:none}}
+
+/* ---------- top bar ---------- */
+.top{
+  position:fixed;top:0;left:0;right:0;z-index:800;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:14px var(--pad);
+  background:rgba(10,10,10,.82);
+  backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+  font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;
+}
+.top b{font-weight:400}
+.top .mid{color:var(--dim)}
+.top .r{display:flex;gap:18px;align-items:center}
+.top .r span{cursor:pointer;transition:opacity .2s}
+.top .r span:hover{opacity:.5}
+
+/* ---------- progress ---------- */
+.prog{position:fixed;top:0;left:0;right:0;height:1px;z-index:850}
+.prog i{display:block;height:100%;background:var(--fg);transform:scaleX(0);transform-origin:0 50%}
+
+/* ---------- hero ---------- */
+.hero{
+  min-height:100vh;
+  padding:calc(60px + var(--pad)) var(--pad) var(--pad);
+  display:flex;flex-direction:column;justify-content:space-between;
+  position:relative;
+}
+.hero__grid{
+  position:absolute;inset:0;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);
+  background-size:clamp(60px,10vw,140px) clamp(60px,10vw,140px);
+  opacity:.35;
+  mask-image:radial-gradient(ellipse at 30% 40%,#000 20%,transparent 75%);
+  -webkit-mask-image:radial-gradient(ellipse at 30% 40%,#000 20%,transparent 75%);
+  pointer-events:none;
+}
+.hero__top{position:relative;z-index:1;display:flex;justify-content:space-between;gap:20px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.hero__mid{position:relative;z-index:1}
+.hero h1{
+  font-family:var(--serif);
+  font-weight:400;
+  font-size:clamp(3.4rem,17vw,15rem);
+  line-height:.84;
+  letter-spacing:-.055em;
+  text-transform:uppercase;
+}
+.hero h1 .out{
+  display:block;
+  -webkit-text-stroke:1px var(--fg);
+  color:transparent;
+}
+.hero h1 .sm{
+  display:block;
+  font-size:.16em;
+  letter-spacing:.02em;
+  text-transform:none;
+  color:var(--dim);
+  margin-top:.9em;
+  font-family:var(--mono);
+  font-style:normal;
+}
+.hero__bot{
+  position:relative;z-index:1;
+  display:flex;justify-content:space-between;align-items:flex-end;gap:24px;
+  border-top:1px solid var(--line);
+  padding-top:16px;
+  font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+}
+.hero__bot .clock{font-size:clamp(1.6rem,5vw,3rem);color:var(--fg);letter-spacing:-.02em;text-transform:none}
+.scrollhint{display:flex;align-items:center;gap:10px}
+.scrollhint i{display:block;width:1px;height:36px;background:var(--dim);position:relative;overflow:hidden}
+.scrollhint i::after{content:"";position:absolute;inset:0;background:var(--fg);animation:drop 1.8s cubic-bezier(.7,0,.3,1) infinite}
+@keyframes drop{0%{transform:translateY(-100%)}60%,100%{transform:translateY(100%)}}
+
+/* ---------- marquee ---------- */
+.marq{
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  overflow:hidden;white-space:nowrap;
+  padding:18px 0;
+}
+.marq__in{display:inline-block;animation:sl 26s linear infinite}
+.marq span{
+  font-family:var(--serif);
+  font-size:clamp(1.6rem,5vw,3.4rem);
+  letter-spacing:-.02em;
+  padding:0 .4em;
+  color:var(--dim);
+}
+.marq span em{font-style:italic;color:var(--fg)}
+@keyframes sl{to{transform:translateX(-50%)}}
+
+/* ---------- section ---------- */
+section.blk{padding:clamp(48px,8vw,120px) var(--pad);border-bottom:1px solid var(--line)}
+.sec__head{display:flex;justify-content:space-between;align-items:baseline;gap:20px;margin-bottom:clamp(28px,5vw,64px);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.sec__head b{font-weight:400;color:var(--fg)}
+
+/* ---------- skills grid ---------- */
+.grid{display:grid;grid-template-columns:1fr;border-top:1px solid var(--line)}
+@media(min-width:700px){.grid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){.grid{grid-template-columns:repeat(3,1fr)}}
+.cell{
+  border-bottom:1px solid var(--line);
+  padding:clamp(20px,3vw,36px);
+  position:relative;overflow:hidden;
+  min-height:clamp(180px,24vw,260px);
+  display:flex;flex-direction:column;justify-content:space-between;
+  transition:color .4s;
+}
+@media(min-width:700px){.cell{border-right:1px solid var(--line)}}
+.cell::before{
+  content:"";position:absolute;inset:0;background:var(--fg);
+  transform:translateY(101%);
+  transition:transform .55s cubic-bezier(.7,0,.2,1);
+  z-index:0;
+}
+.cell:hover::before{transform:translateY(0)}
+.cell:hover{color:var(--bg)}
+.cell>*{position:relative;z-index:1}
+.cell__n{font-size:10.5px;letter-spacing:.16em;color:var(--dim);transition:color .4s}
+.cell:hover .cell__n{color:rgba(10,10,10,.55)}
+.cell__t{font-family:var(--serif);font-size:clamp(1.5rem,3.4vw,2.4rem);letter-spacing:-.03em;line-height:1}
+.cell__d{margin-top:12px;font-size:12px;line-height:1.6;color:var(--dim);max-width:34ch;transition:color .4s}
+.cell:hover .cell__d{color:rgba(10,10,10,.7)}
+.cell__arr{position:absolute;right:clamp(20px,3vw,36px);top:clamp(20px,3vw,36px);font-size:16px;z-index:1;transform:translate(4px,-4px);opacity:0;transition:transform .4s,opacity .4s}
+.cell:hover .cell__arr{transform:none;opacity:1}
+
+/* ---------- timeline ---------- */
+.tl{display:grid;gap:0;border-top:1px solid var(--line)}
+.tl__row{
+  display:grid;grid-template-columns:1fr;gap:6px;
+  padding:22px 0;border-bottom:1px solid var(--line);
+  transition:padding-left .35s ease;
+}
+@media(min-width:700px){
+  .tl__row{grid-template-columns:90px 1fr auto;gap:24px;align-items:baseline}
+}
+.tl__row:hover{padding-left:14px}
+.tl__y{font-size:10.5px;letter-spacing:.16em;color:var(--dim)}
+.tl__h{font-family:var(--serif);font-size:clamp(1.15rem,2.4vw,1.7rem);letter-spacing:-.02em}
+.tl__m{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--line)}
+@media(min-width:800px){.stats{grid-template-columns:repeat(4,1fr)}}
+.stat{padding:clamp(20px,3.5vw,40px);border-bottom:1px solid var(--line);border-right:1px solid var(--line)}
+.stat:last-child{border-right:0}
+.stat__v{font-family:var(--serif);font-size:clamp(2.2rem,6vw,4.4rem);line-height:.9;letter-spacing:-.04em}
+.stat__k{margin-top:14px;font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- accordion ---------- */
+.acc{border-top:1px solid var(--line)}
+.acc__it{border-bottom:1px solid var(--line)}
+.acc__hd{
+  width:100%;display:flex;justify-content:space-between;align-items:center;gap:16px;
+  padding:24px 0;text-align:left;
+  font-family:var(--serif);font-size:clamp(1.2rem,3vw,2rem);letter-spacing:-.02em;
+  transition:opacity .2s;
+}
+.acc__hd:hover{opacity:.6}
+.acc__sg{font-family:var(--mono);font-size:14px;transition:transform .4s cubic-bezier(.7,0,.2,1)}
+.acc__it[data-o="1"] .acc__sg{transform:rotate(45deg)}
+.acc__bd{display:grid;grid-template-rows:0fr;transition:grid-template-rows .5s cubic-bezier(.7,0,.2,1)}
+.acc__it[data-o="1"] .acc__bd{grid-template-rows:1fr}
+.acc__bd>div{overflow:hidden}
+.acc__in{max-width:62ch;padding:0 0 28px;color:var(--dim);font-size:12.5px;line-height:1.75}
+
+/* ---------- code block ---------- */
+.code{
+  margin-top:clamp(24px,4vw,40px);
+  border:1px solid var(--line);
+  background:#0f0f0f;
+  overflow:auto;
+}
+.code__bar{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--line);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+.code pre{padding:18px;font-size:12px;line-height:1.8;color:#b9b3a8;white-space:pre}
+.code .k{color:#e8e4dc}
+.code .c{color:#4e4a44;font-style:italic}
+
+/* ---------- footer ---------- */
+footer{padding:clamp(48px,8vw,110px) var(--pad) 40px}
+.foot__big{
+  font-family:var(--serif);font-size:clamp(2rem,8vw,6.5rem);
+  line-height:.88;letter-spacing:-.05em;text-transform:uppercase;
+  margin-bottom:clamp(32px,6vw,64px);
+}
+.foot__big .out{-webkit-text-stroke:1px var(--fg);color:transparent;display:block}
+.foot__links{display:flex;flex-wrap:wrap;gap:14px 32px;font-size:11px;letter-spacing:.16em;text-transform:uppercase}
+.foot__links a{position:relative;padding-bottom:3px}
+.foot__links a::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--fg);transform:scaleX(0);transform-origin:100% 50%;transition:transform .4s cubic-bezier(.7,0,.2,1)}
+.foot__links a:hover::after{transform:scaleX(1);transform-origin:0 50%}
+.foot__end{margin-top:clamp(40px,7vw,90px);padding-top:20px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- reveal ---------- */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .9s cubic-bezier(.2,.7,.2,1),transform .9s cubic-bezier(.2,.7,.2,1)}
+.rv.on{opacity:1;transform:none}
+
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+}
+</style>
+</head>
+<body>
+
+<div id="grain"></div>
+<div id="cursor"></div>
+<div class="prog"><i id="bar"></i></div>
+
+<header class="top">
+  <b>GZ / archive</b>
+  <span class="mid">Indonesia — 2012</span>
+  <div class="r">
+    <span data-go="#skills">skills</span>
+    <span data-go="#work">work</span>
+    <span data-go="#about">about</span>
+    <span data-go="#contact">contact</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero" id="top">
+  <div class="hero__grid"></div>
+
+  <div class="hero__top">
+    <span>01 — index</span>
+    <span>portfolio / vol. 01</span>
+  </div>
+
+  <div class="hero__mid">
+    <h1>
+      Ghazirul
+      <span class="out">Builds</span>
+      <span class="sm">front-end developer · 13 y/o · self-taught</span>
+    </h1>
+  </div>
+
+  <div class="hero__bot">
+    <div>
+      <div style="margin-bottom:8px">local time</div>
+      <div class="clock" id="clock">--:--:--</div>
+    </div>
+    <div class="scrollhint">
+      <span>scroll</span>
+      <i></i>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marq">
+  <div class="marq__in" id="marq">
+    <span>HTML</span><span><em>·</em></span><span>CSS</span><span><em>·</em></span><span>JAVASCRIPT</span><span><em>·</em></span><span>NO FRAMEWORK</span><span><em>·</em></span><span>BUILT FROM SCRATCH</span><span><em>·</em></span><span>MONOCHROME</span><span><em>·</em></span>
+    <span>HTML</span><span><em>·</em></span><span>CSS</span><span><em>·</em></span><span>JAVASCRIPT</span><span><em>·</em></span><span>NO FRAMEWORK</span><span><em>·</em></span><span>BUILT FROM SCRATCH</span><span><em>·</em></span><span>MONOCHROME</span><span><em>·</em></span>
+  </div>
+</div>
+
+<!-- SKILLS -->
+<section class="blk" id="skills">
+  <div class="sec__head rv"><span>02 — capabilities</span><b>04 disciplines</b></div>
+  <div class="grid">
+
+    <div class="cell rv">
+      <div class="cell__n">01 / markup</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">HTML</div>
+        <p class="cell__d">Struktur semantik dari nol. Heading, list, tabel, form, sampai tag header/main/section/footer. Diketik manual.</p>
+      </div>
+    </div>
+
+    <div class="cell rv">
+      <div class="cell__n">02 / styling</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">CSS</div>
+        <p class="cell__d">Box model, selector, tipografi, warna, flexbox, position fixed, layout responsif tanpa library eksternal.</p>
+      </div>
+    </div>
+
+    <div class="cell rv">
+      <div class="cell__n">03 / logic</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">JavaScript</div>
+        <p class="cell__d">Variable, function, array, object, event listener, dan manipulasi DOM. Halaman ini digerakkan JS.</p>
+      </div>
+    </div>
+
+    <div class="cell rv">
+      <div class="cell__n">04 / workflow</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">Tools</div>
+        <p class="cell__d">VS Code, DevTools untuk inspeksi layout, Git untuk riwayat kode, dan hosting statis untuk publikasi.</p>
+      </div>
+    </div>
+
+    <div class="cell rv">
+      <div class="cell__n">05 / method</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">Design</div>
+        <p class="cell__d">Monokrom, garis rambut 1px, tipografi rapat. Tanpa gradasi, tanpa shadow berlebih, tanpa template.</p>
+      </div>
+    </div>
+
+    <div class="cell rv">
+      <div class="cell__n">06 / state</div>
+      <div class="cell__arr">↗</div>
+      <div>
+        <div class="cell__t">Learning</div>
+        <p class="cell__d">Sedang mengejar fondasi sebelum naik ke framework. Prioritas: paham dulu, bukan hafal dulu.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="blk" id="work">
+  <div class="sec__head rv"><span>03 — numbers</span><b>as of today</b></div>
+  <div class="stats">
+    <div class="stat rv"><div class="stat__v" data-cnt="6">0</div><div class="stat__k">hari belajar HTML</div></div>
+    <div class="stat rv"><div class="stat__v" data-cnt="3">0</div><div class="stat__k">project selesai</div></div>
+    <div class="stat rv"><div class="stat__v" data-cnt="2">0</div><div class="stat__k">file terbangun</div></div>
+    <div class="stat rv"><div class="stat__v" data-cnt="0">0</div><div class="stat__k">framework dipakai</div></div>
+  </div>
+</section>
+
+<!-- TIMELINE -->
+<section class="blk">
+  <div class="sec__head rv"><span>04 — log</span><b>chronological</b></div>
+  <div class="tl">
+    <div class="tl__row rv"><span class="tl__y">2026 / H1</span><span class="tl__h">First contact with HTML</span><span class="tl__m">structure</span></div>
+    <div class="tl__row rv"><span class="tl__y">2026 / H1</span><span class="tl__h">Box model understood</span><span class="tl__m">css</span></div>
+    <div class="tl__row rv"><span class="tl__y">2026 / H1</span><span class="tl__h">First layout built without framework</span><span class="tl__m">flexbox</span></div>
+    <div class="tl__row rv"><span class="tl__y">2026 / H2</span><span class="tl__h">JavaScript — DOM & events</span><span class="tl__m">logic</span></div>
+    <div class="tl__row rv"><span class="tl__y">2026 / H2</span><span class="tl__h">This page</span><span class="tl__m">output</span></div>
+  </div>
+</section>
+
+<!-- ACCORDION -->
+<section class="blk" id="about">
+  <div class="sec__head rv"><span>05 — details</span><b>klik untuk buka</b></div>
+  <div class="acc">
+
+    <div class="acc__it rv" data-o="0">
+      <button class="acc__hd">Siapa yang membangun halaman ini?<span class="acc__sg">+</span></button>
+      <div class="acc__bd"><div><p class="acc__in">Ghazirul, 13 tahun, Indonesia. Belajar dari nol tanpa guru formal — setiap baris diketik, setiap error dibaca, setiap konsep dicoba ulang sampai paham. Halaman ini bukan hasil generator atau template, tapi hasil latihan bertahap.</p></div></div>
+    </div>
+
+    <div class="acc__it rv" data-o="0">
+      <button class="acc__hd">Kenapa monokrom?<span class="acc__sg">+</span></button>
+      <div class="acc__bd"><div><p class="acc__in">Warna cuma dipakai kalau memang perlu. Kalau tata letak dan tipografi sudah benar, warna tidak menyelamatkan apapun. Monokrom memaksa struktur untuk bicara, bukan dekorasi. Semua keputusan visual di sini bisa dipertanggungjawabkan tanpa alasan "biar keren".</p></div></div>
+    </div>
+
+    <div class="acc__it rv" data-o="0">
+      <button class="acc__hd">Apa yang sedang dipelajari berikutnya?<span class="acc__sg">+</span></button>
+      <div class="acc__bd"><div><p class="acc__in">Memperkuat JavaScript: closure, async/await, fetch API, dan pemahaman DOM yang lebih dalam. Setelah itu baru naik ke satu framework — bukan dua. Tujuannya bukan bisa banyak tools, tapi benar-benar paham satu hal sampai ujung.</p></div></div>
+    </div>
+
+    <div class="acc__it rv" data-o="0">
+      <button class="acc__hd">Kenapa tanpa framework?<span class="acc__sg">+</span></button>
+      <div class="acc__bd"><div><p class="acc__in">Karena fondasi tidak bisa dilompati. Framework akan berganti nama dan versi setiap beberapa tahun, tapi box model, selector, DOM, dan event tidak berubah. Yang paham dasar bisa adaptasi ke apapun. Yang cuma hafal framework akan mulai dari nol lagi ketika framework-nya diganti.</p></div></div>
+    </div>
+
+  </div>
+</section>
+
+<!-- CODE -->
+<section class="blk">
+  <div class="sec__head rv"><span>06 — fragment</span><b>vanilla only</b></div>
+  <div class="code rv">
+    <div class="code__bar"><span>script.js</span><span>utf-8</span></div>
+<pre><span class="c">// jam lokal realtime — tanpa library</span>
+<span class="k">const</span> tick = () =&gt; {
+  <span class="k">const</span> d = <span class="k">new</span> Date();
+  clock.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()]
+    .map(n =&gt; String(n).padStart(2, <span class="c">'0'</span>)).join(<span class="c">':'</span>);
+};
+
+<span class="c">// scroll progress 1px di atas</span>
+addEventListener(<span class="c">'scroll'</span>, () =&gt; {
+  <span class="k">const</span> h = document.documentElement;
+  <span class="k">const</span> max = h.scrollHeight - h.clientHeight;
+  bar.style.transform = <span class="c">`scaleX(${h.scrollTop / max})`</span>;
+}, { passive: <span class="k">true</span> });</pre>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="foot__big rv">
+    Let's
+    <span class="out">talk.</span>
+  </div>
+
+  <div class="foot__links rv">
+    <a href="mailto:hello@example.com">email</a>
+    <a<a href="https://github.com/26875008-sketch">github</a>
+    <a href="https://youtube.com" target="_blank" rel="noopener">youtube</a>
+  </div>
+
+  <div class="foot__end">
+    <span>© 2026 — Ghazirul</span>
+    <span>built by hand</span>
+  </div>
+</footer>
+
+<script>
+/* ---------- clock ---------- */
+const clock = document.getElementById('clock');
+const pad = n => String(n).padStart(2,'0');
+const tick = () => {
+  const d = new Date();
+  clock.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+};
+tick(); setInterval(tick, 1000);
+
+/* ---------- scroll progress ---------- */
+const bar = document.getElementById('bar');
+const onScroll = () => {
+  const h = document.documentElement;
+  const max = h.scrollHeight - h.clientHeight;
+  bar.style.transform = `scaleX(${max > 0 ? h.scrollTop / max : 0})`;
+};
+addEventListener('scroll', onScroll, { passive:true });
+onScroll();
+
+/* ---------- reveal ---------- */
+const io = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
+  });
+}, { threshold:.12 });
+document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* ---------- counter ---------- */
+const cntIO = new IntersectionObserver(es => {
+  es.forEach(e => {
+    if (!e.isIntersecting) return;
+    const el = e.target;
+    const target = +el.dataset.cnt;
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(target / 32));
+    const run = () => {
+      cur += step;
+      if (cur >= target) { el.textContent = target; return; }
+      el.textContent = cur;
+      requestAnimationFrame(run);
+    };
+    run();
+    cntIO.unobserve(el);
+  });
+}, { threshold:.5 });
+document.querySelectorAll('[data-cnt]').forEach(el => cntIO.observe(el));
+
+/* ---------- accordion ---------- */
+document.querySelectorAll('.acc__it').forEach(item => {
+  const hd = item.querySelector('.acc__hd');
+  hd.addEventListener('click', () => {
+    const open = item.dataset.o === '1';
+    document.querySelectorAll('.acc__it').forEach(i => i.dataset.o = '0');
+    if (!open) item.dataset.o = '1';
+  });
+});
+
+/* ---------- nav scroll ---------- */
+document.querySelectorAll('[data-go]').forEach(el => {
+  el.addEventListener('click', () => {
+    const t = document.querySelector(el.dataset.go);
+    if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+});
+
+/* ---------- cursor ---------- */
+const cur = document.getElementById('cursor');
+let mx = innerWidth/2, my = innerHeight/2, cx = mx, cy = my;
+
+addEventListener('pointermove', e => {
+  mx = e.clientX; my = e.clientY;
+  cur.classList.remove('hide');
+});
+
+const loop = () => {
+  cx += (mx - cx) * .22;
+  cy += (my - cy) * .22;
+  cur.style.transform = `translate(${cx}px, ${cy}px) translate(-50%,-50%)`;
+  requestAnimationFrame(loop);
+};
+loop();
+
+document.querySelectorAll('a,button,.cell,.acc__hd,.tl__row').forEach(el => {
+  el.addEventListener('mouseenter', () => cur.classList.add('grow'));
+  el.addEventListener('mouseleave', () => cur.classList.remove('grow'));
+});
+
+/* ---------- grain ---------- */
+const gc = document.createElement('canvas');
+gc.width = gc.height = 160;
+const gx = gc.getContext('2d');
+const img = gx.createImageData(160,160);
+for (let i = 0; i < img.data.length; i += 4) {
+  const v = Math.random() * 255 | 0;
+  img.data[i] = img.data[i+1] = img.data[i+2] = v;
+  img.data[i+3] = 255;
+}
+gx.putImageData(img, 0, 0);
+const grain = document.getElementById('grain');
+grain.style.backgroundImage = `url(${gc.toDataURL()})`;
+grain.style.backgroundRepeat = 'repeat';
+grain.style.backgroundSize = '160px 160px';
+
+let gOff = 0;
+const gLoop = () => {
+  gOff = (gOff + 7) % 160;
+  grain.style.backgroundPosition = `${gOff}px ${gOff}px`;
+  setTimeout(gLoop, 60);
+};
+gLoop();
+
+/* Paksa buka link di Android */
+document.querySelectorAll('a').forEach(link => {
+  link.addEventListener('click', function(e) {
+    if (this.href.startsWith('http')) {
+      e.preventDefault();
+      window.location.href = this.href;
+    }
+  });
+});
+</script>
+</body>
+</html>
