@@ -566,16 +566,6 @@ const gLoop = () => {
   setTimeout(gLoop, 60);
 };
 gLoop();
-
-/* Paksa buka link di Android */
-document.querySelectorAll('a').forEach(link => {
-  link.addEventListener('click', function(e) {
-    if (this.href.startsWith('http')) {
-      e.preventDefault();
-      window.location.href = this.href;
-    }
-  });
-});
 </script>
 </body>
 </html>
