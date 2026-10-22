@@ -324,10 +324,9 @@ svg{display:block}
 <!-- IMPORT SUPABASE JS SDK -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-  // --- KONEKSI KE DATABASE SUPABASE ---
+  // --- KONEKSI KE DATABASE SUPABASE (PAKE FETCH NATIVE) ---
   const SUPABASE_URL = 'https://ohwzglqemectoziypge.supabase.co';
   const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9od3pnbHFlbWVjdG9qeml5cGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2MzI2NTEsImV4cCI6MjEwODIwODY1MX0.QiH6MYV6EiQ6WjQgLyQOvUwprIL-vWgwy1xAzGk7cfI';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   // --- LOGIKA UI LAINNYA ---
   const clockEl = document.getElementById('clock');
@@ -401,185 +400,82 @@ svg{display:block}
   setupDoubleTap(document.getElementById('cardLog'), 'viewLog');
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeView('viewSkills'); closeView('viewLog'); } });
 
-  // --- RENDER DATA DARI SUPABASE ---
+  // --- RENDER DATA DARI SUPABASE PAKE FETCH ---
   async function loadData() {
-    // Ambil data dari tabel 'skills', urutkan dari persentase terbesar
-    const { data: skills, error } = await db.from('skills').select('*').order('percent', { ascending: false });
-    
-    if (error) {
-      console.error("Gagal mengambil data:", error);
-      document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:12px;">Gagal konek ke database.</p>`;
-      return;
-    }
+    try {
+      // Nembak API Supabase langsung tanpa library
+      const response = await fetch(`${SUPABASE_URL}/rest/v1/skills?select=*&order=percent.desc`, {
+        method: 'GET',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`
+        }
+      });
 
-    // Set Total Skill
-    document.getElementById('totalSkills').textContent = skills.length;
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status}`);
+      }
 
-    // Warna-warna berdasarkan nama bahasa
-    const colors = {
-      python: '#c4b5fd', c: '#18181b', html: '#d4f162', css: '#93c5fd', js: '#86efac'
-    };
+      const skills = await response.json();
 
-    // 1. Render Orbit (Hanya 3 teratas)
-    const orbitContainer = document.getElementById('orbitContainer');
-    orbitContainer.innerHTML = '';
-    const orbitClasses = ['orb-py', 'orb-c', 'orb-html']; // Class CSS untuk ukuran
-    
-    skills.slice(0, 3).forEach((skill, i) => {
-      const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
-      const txtColor = skill.lang.toLowerCase() === 'c' ? '#fff' : '#18181b';
+      if (!skills || skills.length === 0) {
+        document.getElementById('barsContainer').innerHTML = `<p style="color:orange;font-size:12px; font-family:monospace;">Database kosong / Belum ada data.</p>`;
+        return;
+      }
+
+      document.getElementById('totalSkills').textContent = skills.length;
+
+      const colors = {
+        python: '#c4b5fd', c: '#18181b', html: '#d4f162', css: '#93c5fd', js: '#86efac'
+      };
+
+      // Render Orbit
+      const orbitContainer = document.getElementById('orbitContainer');
+      orbitContainer.innerHTML = '';
+      const orbitClasses = ['orb-py', 'orb-c', 'orb-html'];
       
-      const orb = document.createElement('div');
-      orb.className = `orb ${orbitClasses[i]}`;
-      orb.style.background = bgColor;
-      orb.style.color = txtColor;
-      orb.innerHTML = `<b>${skill.percent}%</b><span>${skill.lang}</span>`;
-      orbitContainer.appendChild(orb);
-    });
+      skills.slice(0, 3).forEach((skill, i) => {
+        const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
+        const txtColor = skill.lang.toLowerCase() === 'c' ? '#fff' : '#18181b';
+        const orb = document.createElement('div');
+        orb.className = `orb ${orbitClasses[i]}`;
+        orb.style.background = bgColor;
+        orb.style.color = txtColor;
+        orb.innerHTML = `<b>${skill.percent}%</b><span>${skill.lang}</span>`;
+        orbitContainer.appendChild(orb);
+      });
 
-    // 2. Render Bars
-    const barsContainer = document.getElementById('barsContainer');
-    barsContainer.innerHTML = '';
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-  // --- KONEKSI KE DATABASE SUPABASE ---
-  const SUPABASE_URL = 'https://ohwzglqemectoziypge.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9od3pnbHFlbWVjdG9qeml5cGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2MzI2NTEsImV4cCI6MjEwODIwODY1MX0.QiH6MYV6EiQ6WjQgLyQOvUwprIL-vWgwy1xAzGk7cfI';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      // Render Bars
+      const barsContainer = document.getElementById('barsContainer');
+      barsContainer.innerHTML = '';
+      skills.forEach(skill => {
+        const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
+        barsContainer.innerHTML += `
+          <div class="bar-row">
+            <div class="bar-meta"><span>${skill.percent}%</span><i>${skill.lang} <span class="tick" style="background:${bgColor}"></span></i></div>
+            <div class="track"><div class="fill" style="width:${skill.percent}%; background:${bgColor}"></div></div>
+          </div>
+        `;
+      });
 
-  // --- LOGIKA UI LAINNYA ---
-  const clockEl = document.getElementById('clock');
-  const p2 = n => String(n).padStart(2,'0');
-  setInterval(() => {
-    const d = new Date();
-    clockEl.textContent = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
-  }, 1000);
+      // Render Detail View
+      const detailContainer = document.getElementById('detailSkillsContainer');
+      detailContainer.innerHTML = '';
+      skills.forEach(skill => {
+        const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
+        detailContainer.innerHTML += `
+          <div class="big-skill">
+            <div class="big-skill-head"><span>${skill.lang.toUpperCase()}</span><span style="color:${bgColor}">${skill.percent}%</span></div>
+            <div class="big-track"><div class="big-fill" style="width:${skill.percent}%; background:${bgColor}"></div></div>
+            <p class="skill-desc">Progress belajar ${skill.lang}.</p>
+          </div>
+        `;
+      });
 
-  const dg = document.getElementById('dotgrid');
-  for (let i = 0; i < 72; i++) {
-    const d = document.createElement('i');
-    if (Math.random() > 0.62) d.classList.add('on');
-    dg.appendChild(d);
-  }
-
-  // Custom Cursor & 3D Tilt
-  const dot = document.getElementById('cursorDot');
-  const ring = document.getElementById('cursorRing');
-  let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
-  window.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX; mouseY = e.clientY;
-    dot.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
-  });
-  function animateCursor() {
-    ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
-    ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
-    requestAnimationFrame(animateCursor);
-  }
-  animateCursor();
-
-  document.querySelectorAll('a, button, .interactive-card').forEach(el => {
-    el.addEventListener('mouseenter', () => ring.classList.add('grow'));
-    el.addEventListener('mouseleave', () => ring.classList.remove('grow'));
-  });
-
-  document.querySelectorAll('.interactive-card').forEach(card => {
-    card.addEventListener('mousemove', (e) => {
-      const rect = card.getBoundingClientRect();
-      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
-      card.style.setProperty('--mouse-x', `${x}px`); card.style.setProperty('--mouse-y', `${y}px`);
-      const rotateX = ((y - rect.height/2) / (rect.height/2)) * -5;
-      const rotateY = ((x - rect.width/2) / (rect.width/2)) * 5;
-      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
-    });
-    card.addEventListener('mouseleave', () => {
-      card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
-    });
-  });
-
-  // Detail View Logic
-  const dashboard = document.getElementById('dashboardApp');
-  function openView(viewId) {
-    dashboard.classList.add('blurred');
-    document.getElementById(viewId).classList.add('active');
-  }
-  function closeView(viewId) {
-    dashboard.classList.remove('blurred');
-    document.getElementById(viewId).classList.remove('active');
-  }
-  function setupDoubleTap(element, targetView) {
-    let lastTap = 0;
-    element.addEventListener('touchend', (e) => {
-      const currentTime = new Date().getTime(); const tapLength = currentTime - lastTap;
-      if (tapLength < 350 && tapLength > 0) { e.preventDefault(); openView(targetView); }
-      lastTap = currentTime;
-    });
-    element.addEventListener('dblclick', () => openView(targetView));
-  }
-  setupDoubleTap(document.getElementById('cardSkills'), 'viewSkills');
-  setupDoubleTap(document.getElementById('cardLog'), 'viewLog');
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeView('viewSkills'); closeView('viewLog'); } });
-
-  // --- RENDER DATA DARI SUPABASE ---
-  async function loadData() {
-    const { data: skills, error } = await db.from('skills').select('*').order('percent', { ascending: false });
-    
-    if (error) {
-      console.error("Gagal mengambil data:", error);
-      // Pake backtick ` ` biar error.message kebaca
-      document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:12px; font-family:monospace;">Error: ${error.message}</p>`;
-      return;
+    } catch (error) {
+      console.error(error);
+      document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:12px; font-family:monospace;">Gagal konek: ${error.message}</p>`;
     }
-
-    if (!skills || skills.length === 0) {
-      document.getElementById('barsContainer').innerHTML = `<p style="color:orange;font-size:12px; font-family:monospace;">Database kosong / Belum ada data.</p>`;
-      return;
-    }
-
-    document.getElementById('totalSkills').textContent = skills.length;
-
-    const colors = {
-      python: '#c4b5fd', c: '#18181b', html: '#d4f162', css: '#93c5fd', js: '#86efac'
-    };
-
-    const orbitContainer = document.getElementById('orbitContainer');
-    orbitContainer.innerHTML = '';
-    const orbitClasses = ['orb-py', 'orb-c', 'orb-html'];
-    
-    skills.slice(0, 3).forEach((skill, i) => {
-      const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
-      const txtColor = skill.lang.toLowerCase() === 'c' ? '#fff' : '#18181b';
-      const orb = document.createElement('div');
-      orb.className = `orb ${orbitClasses[i]}`;
-      orb.style.background = bgColor;
-      orb.style.color = txtColor;
-      orb.innerHTML = `<b>${skill.percent}%</b><span>${skill.lang}</span>`;
-      orbitContainer.appendChild(orb);
-    });
-
-    const barsContainer = document.getElementById('barsContainer');
-    barsContainer.innerHTML = '';
-    skills.forEach(skill => {
-      const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
-      barsContainer.innerHTML += `
-        <div class="bar-row">
-          <div class="bar-meta"><span>${skill.percent}%</span><i>${skill.lang} <span class="tick" style="background:${bgColor}"></span></i></div>
-          <div class="track"><div class="fill" style="width:${skill.percent}%; background:${bgColor}"></div></div>
-        </div>
-      `;
-    });
-
-    const detailContainer = document.getElementById('detailSkillsContainer');
-    detailContainer.innerHTML = '';
-    skills.forEach(skill => {
-      const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
-      detailContainer.innerHTML += `
-        <div class="big-skill">
-          <div class="big-skill-head"><span>${skill.lang.toUpperCase()}</span><span style="color:${bgColor}">${skill.percent}%</span></div>
-          <div class="big-track"><div class="big-fill" style="width:${skill.percent}%; background:${bgColor}"></div></div>
-          <p class="skill-desc">Progress belajar ${skill.lang}.</p>
-        </div>
-      `;
-    });
   }
 
   loadData();
