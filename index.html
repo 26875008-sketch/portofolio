@@ -440,6 +440,124 @@ svg{display:block}
     // 2. Render Bars
     const barsContainer = document.getElementById('barsContainer');
     barsContainer.innerHTML = '';
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // --- KONEKSI KE DATABASE SUPABASE ---
+  const SUPABASE_URL = 'https://ohwzglqemectoziypge.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9od3pnbHFlbWVjdG9qeml5cGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2MzI2NTEsImV4cCI6MjEwODIwODY1MX0.QiH6MYV6EiQ6WjQgLyQOvUwprIL-vWgwy1xAzGk7cfI';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  // --- LOGIKA UI LAINNYA ---
+  const clockEl = document.getElementById('clock');
+  const p2 = n => String(n).padStart(2,'0');
+  setInterval(() => {
+    const d = new Date();
+    clockEl.textContent = `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())}`;
+  }, 1000);
+
+  const dg = document.getElementById('dotgrid');
+  for (let i = 0; i < 72; i++) {
+    const d = document.createElement('i');
+    if (Math.random() > 0.62) d.classList.add('on');
+    dg.appendChild(d);
+  }
+
+  // Custom Cursor & 3D Tilt
+  const dot = document.getElementById('cursorDot');
+  const ring = document.getElementById('cursorRing');
+  let mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+  window.addEventListener('mousemove', (e) => {
+    mouseX = e.clientX; mouseY = e.clientY;
+    dot.style.transform = `translate(${mouseX}px, ${mouseY}px) translate(-50%, -50%)`;
+  });
+  function animateCursor() {
+    ringX += (mouseX - ringX) * 0.15; ringY += (mouseY - ringY) * 0.15;
+    ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
+    requestAnimationFrame(animateCursor);
+  }
+  animateCursor();
+
+  document.querySelectorAll('a, button, .interactive-card').forEach(el => {
+    el.addEventListener('mouseenter', () => ring.classList.add('grow'));
+    el.addEventListener('mouseleave', () => ring.classList.remove('grow'));
+  });
+
+  document.querySelectorAll('.interactive-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const rect = card.getBoundingClientRect();
+      const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+      card.style.setProperty('--mouse-x', `${x}px`); card.style.setProperty('--mouse-y', `${y}px`);
+      const rotateX = ((y - rect.height/2) / (rect.height/2)) * -5;
+      const rotateY = ((x - rect.width/2) / (rect.width/2)) * 5;
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+    card.addEventListener('mouseleave', () => {
+      card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+    });
+  });
+
+  // Detail View Logic
+  const dashboard = document.getElementById('dashboardApp');
+  function openView(viewId) {
+    dashboard.classList.add('blurred');
+    document.getElementById(viewId).classList.add('active');
+  }
+  function closeView(viewId) {
+    dashboard.classList.remove('blurred');
+    document.getElementById(viewId).classList.remove('active');
+  }
+  function setupDoubleTap(element, targetView) {
+    let lastTap = 0;
+    element.addEventListener('touchend', (e) => {
+      const currentTime = new Date().getTime(); const tapLength = currentTime - lastTap;
+      if (tapLength < 350 && tapLength > 0) { e.preventDefault(); openView(targetView); }
+      lastTap = currentTime;
+    });
+    element.addEventListener('dblclick', () => openView(targetView));
+  }
+  setupDoubleTap(document.getElementById('cardSkills'), 'viewSkills');
+  setupDoubleTap(document.getElementById('cardLog'), 'viewLog');
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeView('viewSkills'); closeView('viewLog'); } });
+
+  // --- RENDER DATA DARI SUPABASE ---
+  async function loadData() {
+    const { data: skills, error } = await db.from('skills').select('*').order('percent', { ascending: false });
+    
+    if (error) {
+      console.error("Gagal mengambil data:", error);
+      // Pake backtick ` ` biar error.message kebaca
+      document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:12px; font-family:monospace;">Error: ${error.message}</p>`;
+      return;
+    }
+
+    if (!skills || skills.length === 0) {
+      document.getElementById('barsContainer').innerHTML = `<p style="color:orange;font-size:12px; font-family:monospace;">Database kosong / Belum ada data.</p>`;
+      return;
+    }
+
+    document.getElementById('totalSkills').textContent = skills.length;
+
+    const colors = {
+      python: '#c4b5fd', c: '#18181b', html: '#d4f162', css: '#93c5fd', js: '#86efac'
+    };
+
+    const orbitContainer = document.getElementById('orbitContainer');
+    orbitContainer.innerHTML = '';
+    const orbitClasses = ['orb-py', 'orb-c', 'orb-html'];
+    
+    skills.slice(0, 3).forEach((skill, i) => {
+      const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
+      const txtColor = skill.lang.toLowerCase() === 'c' ? '#fff' : '#18181b';
+      const orb = document.createElement('div');
+      orb.className = `orb ${orbitClasses[i]}`;
+      orb.style.background = bgColor;
+      orb.style.color = txtColor;
+      orb.innerHTML = `<b>${skill.percent}%</b><span>${skill.lang}</span>`;
+      orbitContainer.appendChild(orb);
+    });
+
+    const barsContainer = document.getElementById('barsContainer');
+    barsContainer.innerHTML = '';
     skills.forEach(skill => {
       const bgColor = colors[skill.lang.toLowerCase()] || '#e4e4e7';
       barsContainer.innerHTML += `
@@ -450,7 +568,6 @@ svg{display:block}
       `;
     });
 
-    // 3. Render Detail Skills
     const detailContainer = document.getElementById('detailSkillsContainer');
     detailContainer.innerHTML = '';
     skills.forEach(skill => {
@@ -465,24 +582,7 @@ svg{display:block}
     });
   }
 
-  // Jalankan fungsi load data saat halaman dibuka
-  async function loadData() {
-  // Ambil data dari tabel 'skills', urutkan dari persentase terbesar
-  const { data: skills, error } = await db.from('skills').select('*').order('percent', { ascending: false });
-  
-  if (error) {
-    console.error("Gagal mengambil data:", error);
-    // INI YANG DIUBAH: Biar error aslinya kelihatan di web
-    document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:11px; font-family:monospace;">Error: ${error.message}</p>`;
-    return;
-  }
-
-  if (!skills || skills.length === 0) {
-    document.getElementById('barsContainer').innerHTML = `<p style="color:orange;font-size:11px; font-family:monospace;">Database kosong / Tabel belum diisi.</p>`;
-    return;
-  }
-
-  // ... (sisanya biarin sama kayak sebelumnya) ...
+  loadData();
 </script>
 </body>
 </html>
