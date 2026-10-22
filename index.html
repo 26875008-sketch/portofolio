@@ -466,7 +466,23 @@ svg{display:block}
   }
 
   // Jalankan fungsi load data saat halaman dibuka
-  loadData();
+  async function loadData() {
+  // Ambil data dari tabel 'skills', urutkan dari persentase terbesar
+  const { data: skills, error } = await db.from('skills').select('*').order('percent', { ascending: false });
+  
+  if (error) {
+    console.error("Gagal mengambil data:", error);
+    // INI YANG DIUBAH: Biar error aslinya kelihatan di web
+    document.getElementById('barsContainer').innerHTML = `<p style="color:red;font-size:11px; font-family:monospace;">Error: ${error.message}</p>`;
+    return;
+  }
+
+  if (!skills || skills.length === 0) {
+    document.getElementById('barsContainer').innerHTML = `<p style="color:orange;font-size:11px; font-family:monospace;">Database kosong / Tabel belum diisi.</p>`;
+    return;
+  }
+
+  // ... (sisanya biarin sama kayak sebelumnya) ...
 </script>
 </body>
 </html>
